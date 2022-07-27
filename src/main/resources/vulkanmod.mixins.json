@@ -8,7 +8,7 @@
   "client": [
     "debug.DebugHudM",
     "debug.GlDebugInfoM",
-    "render.BakedQuadFactoryM",
+    "optimization.BakedQuadFactoryM",
     "render.BufferBuilderM",
     "render.BufferRendererM",
     "render.VertexBufferM",

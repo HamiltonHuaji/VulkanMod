@@ -1,4 +1,4 @@
-package net.vulkanmod.mixin.render;
+package net.vulkanmod.mixin.optimization;
 
 import net.minecraft.client.render.model.BakedQuadFactory;
 import net.minecraft.client.render.model.CubeFace;
