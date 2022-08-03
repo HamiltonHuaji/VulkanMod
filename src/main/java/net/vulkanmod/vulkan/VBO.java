@@ -161,6 +161,7 @@ public class VBO {
             RenderSystem.assertOnRenderThread();
 
             RenderSystem.setShader(() -> shader);
+            shader.bind();
 
             VRenderSystem.applyMVP(MV, P);
 

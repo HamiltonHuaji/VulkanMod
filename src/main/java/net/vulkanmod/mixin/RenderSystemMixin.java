@@ -240,6 +240,11 @@ public abstract class RenderSystemMixin {
         Drawer.currentBlendState = Pipeline.NO_BLEND_STATE;
     }
 
+    @Overwrite
+    public static void blendEquation(int mode) {
+        // TODO
+    }
+
     /**
      * @author
      */

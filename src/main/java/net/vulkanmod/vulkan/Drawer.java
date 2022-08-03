@@ -3,6 +3,7 @@ package net.vulkanmod.vulkan;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.util.math.Matrix4f;
+import net.vulkanmod.Initializer;
 import net.vulkanmod.interfaces.ShaderMixed;
 import net.vulkanmod.vulkan.memory.*;
 import net.vulkanmod.vulkan.shader.PushConstant;

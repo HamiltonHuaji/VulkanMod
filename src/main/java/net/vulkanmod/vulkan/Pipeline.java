@@ -5,11 +5,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.GlStateManager;
+import net.minecraft.client.gl.GlBlendState;
+import net.vulkanmod.Initializer;
 import net.vulkanmod.interfaces.VertexFormatMixed;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormatElement;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.vulkanmod.mixin.GlBlendStateAccessor;
 import net.vulkanmod.vulkan.memory.MemoryManager;
 import net.vulkanmod.vulkan.memory.UniformBuffers;
 import net.vulkanmod.vulkan.shader.Field;
@@ -28,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
 
+import static java.lang.String.valueOf;
 import static net.vulkanmod.vulkan.ShaderSPIRVUtils.*;
 import static net.vulkanmod.vulkan.Vulkan.getSwapChainImages;
 import static org.lwjgl.system.MemoryStack.stackPush;
@@ -44,7 +48,7 @@ public class Pipeline {
     private static final long pipelineCache = createPipelineCache();
     private static final int imagesSize = getSwapChainImages().size();
 
-    private String path;
+    public String path;
     private long descriptorSetLayout;
     private long pipelineLayout;
     private Map<PipelineState, Long> graphicsPipelines = new HashMap<>();
@@ -62,21 +66,24 @@ public class Pipeline {
     private long vertShaderModule = 0;
     private long fragShaderModule = 0;
 
-    public Pipeline(VertexFormat vertexFormat, String path) {
+    public Pipeline(VertexFormat vertexFormat, String path, PipelineState state) {
         this.path = path;
 
         createDescriptorSetLayout(path);
         createPipelineLayout();
-        graphicsPipelines.computeIfAbsent(new PipelineState(DEFAULT_BLEND_STATE, DEFAULT_DEPTH_STATE, DEFAULT_LOGICOP_STATE, DEFAULT_COLORMASK),
-                (pipelineState) -> createGraphicsPipeline(vertexFormat, pipelineState));
+        graphicsPipelines.computeIfAbsent(state, (pipelineState) -> createGraphicsPipeline(vertexFormat, pipelineState));
         createDescriptorPool(descriptorCount);
         //allocateDescriptorSets();
 
+    }
+    public Pipeline(VertexFormat vertexFormat, String path) {
+        this(vertexFormat, path, new PipelineState(DEFAULT_BLEND_STATE, DEFAULT_DEPTH_STATE, DEFAULT_LOGICOP_STATE, DEFAULT_COLORMASK));
     }
 
     private long createGraphicsPipeline(VertexFormat vertexFormat, PipelineState state) {
         this.vertexFormat = vertexFormat;
 
+        Initializer.LOGGER.info(path+"\n"+state.blendState.toString());
         try(MemoryStack stack = stackPush()) {
 
             // Let's compile the GLSL shaders into SPIR-V at runtime using the org.lwjgl.util.shaderc library
@@ -821,19 +828,26 @@ public class Pipeline {
             this(true, srcRgb, dstRgb, srcAlpha, dstAlpha);
         }
 
+        public BlendState(GlBlendState blendState) {
+            this(true,
+                    ((GlBlendStateAccessor)blendState).getSrcRgb(),
+                    ((GlBlendStateAccessor)blendState).getDstRgb(),
+                    ((GlBlendStateAccessor)blendState).getSrcAlpha(),
+                    ((GlBlendStateAccessor)blendState).getDstAlpha());
+        }
         public BlendState(int srcRgb, int dstRgb, int srcAlpha, int dstAlpha) {
             this(true, srcRgb, dstRgb, srcAlpha, dstAlpha);
         }
 
         protected BlendState(boolean enabled, int srcRgb, int dstRgb, int srcAlpha, int dstAlpha) {
             this.enabled = enabled;
-            this.srcRgbFactor = srcRgb;
-            this.dstRgbFactor = dstRgb;
-            this.srcAlphaFactor = srcAlpha;
-            this.dstAlphaFactor = dstAlpha;
+            this.srcRgbFactor = glToVulkan(srcRgb);
+            this.dstRgbFactor = glToVulkan(dstRgb);
+            this.srcAlphaFactor = glToVulkan(srcAlpha);
+            this.dstAlphaFactor = glToVulkan(dstAlpha);
         }
 
-        private int glToVulkan(int value) {
+        public static int glToVulkan(int value) {
             return switch (value) {
                 case 1 -> VK_BLEND_FACTOR_ONE;
                 case 0 -> VK_BLEND_FACTOR_ZERO;
@@ -876,6 +890,52 @@ public class Pipeline {
         @Override
         public int hashCode() {
             return Objects.hash(srcRgbFactor, dstRgbFactor, srcAlphaFactor, dstAlphaFactor, blendOp);
+        }
+
+        public String toString() {
+            return
+            "enabled: "+ (this.enabled ? "true" : "false") +
+            "\nsrcRgbFactor: " + switch (this.srcRgbFactor) {
+                case VK_BLEND_FACTOR_ONE -> "VK_BLEND_FACTOR_ONE";
+                case VK_BLEND_FACTOR_ZERO -> "VK_BLEND_FACTOR_ZERO";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA";
+                case VK_BLEND_FACTOR_SRC_ALPHA -> "VK_BLEND_FACTOR_SRC_ALPHA";
+                case VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR";
+                case VK_BLEND_FACTOR_DST_COLOR -> "VK_BLEND_FACTOR_DST_COLOR";
+                case VK_BLEND_FACTOR_SRC_COLOR -> "VK_BLEND_FACTOR_SRC_COLOR";
+                default -> throw new RuntimeException("srcRgbFactor: unknown blend factor.. " + valueOf(this.srcRgbFactor));
+            } + "\ndstRgbFactor: " + switch (this.dstRgbFactor) {
+                case VK_BLEND_FACTOR_ONE -> "VK_BLEND_FACTOR_ONE";
+                case VK_BLEND_FACTOR_ZERO -> "VK_BLEND_FACTOR_ZERO";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA";
+                case VK_BLEND_FACTOR_SRC_ALPHA -> "VK_BLEND_FACTOR_SRC_ALPHA";
+                case VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR";
+                case VK_BLEND_FACTOR_DST_COLOR -> "VK_BLEND_FACTOR_DST_COLOR";
+                case VK_BLEND_FACTOR_SRC_COLOR -> "VK_BLEND_FACTOR_SRC_COLOR";
+                default -> throw new RuntimeException("dstRgbFactor: unknown blend factor.. " + valueOf(this.dstRgbFactor));
+            } + "\nsrcAlphaFactor: " + switch (this.srcAlphaFactor) {
+                case VK_BLEND_FACTOR_ONE -> "VK_BLEND_FACTOR_ONE";
+                case VK_BLEND_FACTOR_ZERO -> "VK_BLEND_FACTOR_ZERO";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA";
+                case VK_BLEND_FACTOR_SRC_ALPHA -> "VK_BLEND_FACTOR_SRC_ALPHA";
+                case VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR";
+                case VK_BLEND_FACTOR_DST_COLOR -> "VK_BLEND_FACTOR_DST_COLOR";
+                case VK_BLEND_FACTOR_SRC_COLOR -> "VK_BLEND_FACTOR_SRC_COLOR";
+                default -> throw new RuntimeException("srcAlphaFactor: unknown blend factor.. " + valueOf(this.srcAlphaFactor));
+            } + "\ndstAlphaFactor: " + switch (this.dstAlphaFactor) {
+                case VK_BLEND_FACTOR_ONE -> "VK_BLEND_FACTOR_ONE";
+                case VK_BLEND_FACTOR_ZERO -> "VK_BLEND_FACTOR_ZERO";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA";
+                case VK_BLEND_FACTOR_SRC_ALPHA -> "VK_BLEND_FACTOR_SRC_ALPHA";
+                case VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR";
+                case VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR -> "VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR";
+                case VK_BLEND_FACTOR_DST_COLOR -> "VK_BLEND_FACTOR_DST_COLOR";
+                case VK_BLEND_FACTOR_SRC_COLOR -> "VK_BLEND_FACTOR_SRC_COLOR";
+                default -> throw new RuntimeException("dstAlphaFactor: unknown blend factor.. " + valueOf(this.dstAlphaFactor));
+            };
         }
     }
 

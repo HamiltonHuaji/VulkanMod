@@ -2,3 +2,11 @@ accessWidener	v1	named
 #Accessible class net/minecraft/client/render/WorldRenderer$ChunkInfo
 Accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo chunk Lnet/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk;
 Mutable field net/minecraft/client/render/VertexFormats COLOR_ELEMENT Lnet/minecraft/client/render/VertexFormatElement;
+Mutable field net/minecraft/client/render/Shader blendState Lnet/minecraft/client/gl/GlBlendState;
+#Accessible field net/minecraft/client/gl/GlBlendState srcRgb I;
+#Accessible field net/minecraft/client/gl/GlBlendState srcAlpha I;
+#Accessible field net/minecraft/client/gl/GlBlendState dstRgb I;
+#Accessible field net/minecraft/client/gl/GlBlendState dstAlpha I;
+#Accessible field net/minecraft/client/gl/GlBlendState func I;
+#Accessible field net/minecraft/client/gl/GlBlendState separateBlend Z;
+#Accessible field net/minecraft/client/gl/GlBlendState blendDisabled Z;

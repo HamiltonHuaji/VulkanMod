@@ -30,6 +30,7 @@
     "GameRendererMixin",
     "GlProgramManagerMixin",
     "GlStateManagerM",
+    "GlBlendStateAccessor",
     "IntTypeMixin",
     "MinecraftClientMixin",
     "ModelLoaderM",

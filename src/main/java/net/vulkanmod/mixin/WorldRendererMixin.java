@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import net.minecraft.client.render.*;
+import net.vulkanmod.Initializer;
 import net.vulkanmod.interfaces.ShaderMixed;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderEffect;
@@ -20,6 +21,8 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+
+import static org.lwjgl.vulkan.VK10.VK_BLEND_FACTOR_ONE;
 
 @Mixin(WorldRenderer.class)
 public abstract class WorldRendererMixin {
@@ -111,6 +114,7 @@ public abstract class WorldRendererMixin {
 
         Drawer drawer = Drawer.getInstance();
         Pipeline pipeline = ((ShaderMixed)(RenderSystem.getShader())).getPipeline();
+        RenderSystem.getShader().bind();
         drawer.bindPipeline(pipeline);
 
         drawer.uploadAndBindUBOs(pipeline);
